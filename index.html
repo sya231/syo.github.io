@@ -1,0 +1,1093 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>資産運用シミュレーション - 投資体験ゲーム（3年間コース）</title>
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Noto Sans JP', 'Inter', sans-serif;
+            background-color: #f8fafc;
+        }
+        /* Excel sheet style borders */
+        .excel-table th, .excel-table td {
+            border: 1px solid #cbd5e1;
+        }
+        .excel-input {
+            width: 100%;
+            padding: 6px 8px;
+            text-align: right;
+            border: 1px solid transparent;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        .excel-input:focus {
+            outline: 2px solid #2563eb;
+            background-color: #eff6ff;
+            border-radius: 2px;
+        }
+        .excel-select, .excel-text-input {
+            width: 100%;
+            padding: 4px 6px;
+            font-size: 0.8125rem;
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+            background-color: #ffffff;
+        }
+        .excel-select:focus, .excel-text-input:focus {
+            outline: 2px solid #2563eb;
+            border-color: #2563eb;
+        }
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #94a3b8;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #64748b;
+        }
+    </style>
+</head>
+<body class="text-slate-800 min-h-screen flex flex-col">
+
+    <!-- Header Area -->
+    <header class="bg-white shadow-sm border-b border-slate-200 sticky top-0 z-30">
+        <div class="max-w-7xl mx-auto px-4 py-3 sm:px-6 lg:px-8 flex flex-wrap justify-between items-center gap-4">
+            <div class="flex items-center space-x-4">
+                <!-- Red Year Badge -->
+                <div id="yearLabel" class="bg-red-600 text-white font-black text-xl sm:text-2xl px-6 py-2 rounded shadow flex items-center justify-center tracking-wider transition-all duration-300">
+                    一年目
+                </div>
+                <div>
+                    <div class="text-base sm:text-xl font-bold text-slate-800 flex items-center gap-2">
+                        <span id="yearDisplay">2024年度</span>
+                        <span class="text-slate-300">|</span>
+                        <span>今年の投資額：<span class="text-blue-600 font-extrabold" id="annualInvestment">100</span>万円</span>
+                    </div>
+                    <p class="text-xs text-slate-500">相談前・相談後の投資配分と情報参照の理由を入力してください</p>
+                </div>
+            </div>
+
+            <!-- Stats Bar -->
+            <div class="flex items-center gap-4 bg-slate-50 p-2.5 rounded-lg border border-slate-200 text-sm">
+                <div>
+                    <span class="text-slate-500 text-xs block">通算運用後資産</span>
+                    <span id="totalAssetHeader" class="text-lg font-bold text-emerald-600">100.0 万円</span>
+                </div>
+                <div class="h-8 border-r border-slate-300"></div>
+                <div>
+                    <span class="text-slate-500 text-xs block">現在位置</span>
+                    <span id="progressYearHeader" class="text-lg font-bold text-slate-700">1 / 3 年目</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="flex-grow max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
+
+        <!-- Guide Banner -->
+        <div class="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r shadow-sm flex items-start gap-3">
+            <i class="fa-solid fa-circle-info text-blue-500 text-lg mt-0.5"></i>
+            <div class="text-xs sm:text-sm text-blue-900 leading-relaxed">
+                <strong>シミュレーション手順 (全3年コース)：</strong>
+                ① 相談前と ② 相談後の投資配分（合計100万円）を入力 → ③ 変更理由と情報提供者を選択 → 下部の <strong>「トータル資産を確認する」</strong> を押して運用結果を判定。成果を確認後 <strong>「次年度へ移動」</strong>（3年目は「3年間の最終結果を見る」）へ進んでください。
+            </div>
+        </div>
+
+        <!-- 3-Column Spreadsheet Layout -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+            <!-- ① 相談前 (Column 1) -->
+            <div class="lg:col-span-4 bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col">
+                <div class="bg-rose-50 border-b border-rose-200 px-4 py-3 flex justify-between items-center">
+                    <h2 class="font-bold text-rose-800 text-base flex items-center gap-2">
+                        <span class="w-6 h-6 rounded-full bg-rose-600 text-white flex items-center justify-center text-xs font-bold">1</span>
+                        ①相談前
+                    </h2>
+                    <span id="beforeStatusBadge" class="text-xs px-2 py-0.5 rounded font-medium bg-amber-100 text-amber-800 border border-amber-300">100万円</span>
+                </div>
+
+                <div class="p-4 space-y-5 flex-grow">
+                    <!-- Allocation Table -->
+                    <div>
+                        <table class="w-full text-sm excel-table border-collapse">
+                            <thead>
+                                <tr class="bg-slate-100 text-slate-700">
+                                    <th class="py-2 px-3 text-left font-semibold">投資先</th>
+                                    <th class="py-2 px-3 text-right font-semibold w-28">投資額 (万円)</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-200">
+                                <tr>
+                                    <td class="py-1.5 px-3 bg-slate-50 font-medium text-slate-700">TOPIX</td>
+                                    <td class="p-0"><input type="number" min="0" max="100" class="excel-input before-input" data-asset="topix" value="0"></td>
+                                </tr>
+                                <tr>
+                                    <td class="py-1.5 px-3 bg-slate-50 font-medium text-slate-700">グロース250</td>
+                                    <td class="p-0"><input type="number" min="0" max="100" class="excel-input before-input" data-asset="growth" value="0"></td>
+                                </tr>
+                                <tr>
+                                    <td class="py-1.5 px-3 bg-slate-50 font-medium text-slate-700">オルカン</td>
+                                    <td class="p-0"><input type="number" min="0" max="100" class="excel-input before-input" data-asset="allcountry" value="0"></td>
+                                </tr>
+                                <tr>
+                                    <td class="py-1.5 px-3 bg-slate-50 font-medium text-slate-700">国内債券</td>
+                                    <td class="p-0"><input type="number" min="0" max="100" class="excel-input before-input" data-asset="bond" value="0"></td>
+                                </tr>
+                                <tr>
+                                    <td class="py-1.5 px-3 bg-slate-50 font-medium text-slate-700">預金</td>
+                                    <td class="p-0"><input type="number" min="0" max="100" class="excel-input before-input" data-asset="cash" value="100"></td>
+                                </tr>
+                                <tr class="bg-slate-100 font-bold text-slate-800">
+                                    <td class="py-2 px-3">合計</td>
+                                    <td class="py-2 px-3 text-right"><span id="beforeTotal">100</span> 万円</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Reason Checkboxes -->
+                    <div class="space-y-2 pt-2 border-t border-slate-100">
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider">投資理由</label>
+                        <div class="space-y-2 text-xs sm:text-sm">
+                            <label class="flex items-center gap-2 cursor-pointer hover:text-blue-600">
+                                <input type="checkbox" class="before-reason rounded text-blue-600 focus:ring-blue-500" value="値上がりを期待した">
+                                <span>値上がりを期待した</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer hover:text-blue-600">
+                                <input type="checkbox" class="before-reason rounded text-blue-600 focus:ring-blue-500" value="リスクが低いと考えた">
+                                <span>リスクが低いと考えた</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer hover:text-blue-600">
+                                <input type="checkbox" class="before-reason rounded text-blue-600 focus:ring-blue-500" value="分散するため">
+                                <span>分散するため</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer hover:text-blue-600">
+                                <input type="checkbox" class="before-reason rounded text-blue-600 focus:ring-blue-500" value="自分が持っていたカードを参考にした">
+                                <span>自分が持っていたカードを参考にした</span>
+                            </label>
+                            <div class="flex items-center gap-2">
+                                <input type="checkbox" id="beforeReasonOtherCheck" class="before-reason rounded text-blue-600 focus:ring-blue-500" value="その他">
+                                <span class="whitespace-nowrap">その他（</span>
+                                <input type="text" id="beforeReasonOtherText" class="excel-text-input text-xs" placeholder="理由">
+                                <span>）</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ② 相談後 (Column 2) -->
+            <div class="lg:col-span-4 bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col">
+                <div class="bg-indigo-50 border-b border-indigo-200 px-4 py-3 flex justify-between items-center">
+                    <h2 class="font-bold text-indigo-800 text-base flex items-center gap-2">
+                        <span class="w-6 h-6 rounded-full bg-indigo-600 text-white flex items-center justify-center text-xs font-bold">2</span>
+                        ②相談後
+                    </h2>
+                    <span id="afterStatusBadge" class="text-xs px-2 py-0.5 rounded font-medium bg-amber-100 text-amber-800 border border-amber-300">100万円</span>
+                </div>
+
+                <div class="p-4 space-y-5 flex-grow">
+                    <!-- Allocation Table -->
+                    <div>
+                        <table class="w-full text-sm excel-table border-collapse">
+                            <thead>
+                                <tr class="bg-slate-100 text-slate-700">
+                                    <th class="py-2 px-3 text-left font-semibold">投資先</th>
+                                    <th class="py-2 px-3 text-right font-semibold w-28">投資額 (万円)</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-200">
+                                <tr>
+                                    <td class="py-1.5 px-3 bg-slate-50 font-medium text-slate-700">TOPIX</td>
+                                    <td class="p-0"><input type="number" min="0" max="100" class="excel-input after-input" data-asset="topix" value="0"></td>
+                                </tr>
+                                <tr>
+                                    <td class="py-1.5 px-3 bg-slate-50 font-medium text-slate-700">グロース250</td>
+                                    <td class="p-0"><input type="number" min="0" max="100" class="excel-input after-input" data-asset="growth" value="0"></td>
+                                </tr>
+                                <tr>
+                                    <td class="py-1.5 px-3 bg-slate-50 font-medium text-slate-700">オルカン</td>
+                                    <td class="p-0"><input type="number" min="0" max="100" class="excel-input after-input" data-asset="allcountry" value="0"></td>
+                                </tr>
+                                <tr>
+                                    <td class="py-1.5 px-3 bg-slate-50 font-medium text-slate-700">国内債券</td>
+                                    <td class="p-0"><input type="number" min="0" max="100" class="excel-input after-input" data-asset="bond" value="0"></td>
+                                </tr>
+                                <tr>
+                                    <td class="py-1.5 px-3 bg-slate-50 font-medium text-slate-700">預金</td>
+                                    <td class="p-0"><input type="number" min="0" max="100" class="excel-input after-input" data-asset="cash" value="100"></td>
+                                </tr>
+                                <tr class="bg-slate-100 font-bold text-slate-800">
+                                    <td class="py-2 px-3">合計</td>
+                                    <td class="py-2 px-3 text-right"><span id="afterTotal">100</span> 万円</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Reason Checkboxes -->
+                    <div class="space-y-2 pt-2 border-t border-slate-100">
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider">投資理由</label>
+                        <div class="space-y-2 text-xs sm:text-sm">
+                            <label class="flex items-center gap-2 cursor-pointer hover:text-indigo-600">
+                                <input type="checkbox" class="after-reason rounded text-indigo-600 focus:ring-indigo-500" value="値上がりを期待した">
+                                <span>値上がりを期待した</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer hover:text-indigo-600">
+                                <input type="checkbox" class="after-reason rounded text-indigo-600 focus:ring-indigo-500" value="リスクが低いと考えた">
+                                <span>リスクが低いと考えた</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer hover:text-indigo-600">
+                                <input type="checkbox" class="after-reason rounded text-indigo-600 focus:ring-indigo-500" value="分散するため">
+                                <span>分散するため</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer hover:text-indigo-600">
+                                <input type="checkbox" class="after-reason rounded text-indigo-600 focus:ring-indigo-500" value="自分が持っていたカードを参考にした">
+                                <span>自分が持っていたカードを参考にした</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer font-bold text-purple-700 bg-purple-50 p-1.5 rounded border border-purple-200 hover:bg-purple-100">
+                                <input type="checkbox" id="referOthersCheck" class="after-reason rounded text-purple-600 focus:ring-purple-500" value="他の人の意見を参考にした">
+                                <span>他の人の意見を参考にした ⇒ ③へ</span>
+                            </label>
+                            <div class="flex items-center gap-2">
+                                <input type="checkbox" id="afterReasonOtherCheck" class="after-reason rounded text-indigo-600 focus:ring-indigo-500" value="その他">
+                                <span class="whitespace-nowrap">その他（</span>
+                                <input type="text" id="afterReasonOtherText" class="excel-text-input text-xs" placeholder="理由">
+                                <span>）</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ③ 変更理由・情報参照 (Column 3) -->
+            <div id="section3Card" class="lg:col-span-4 bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col transition-all duration-300">
+                <div class="bg-purple-50 border-b border-purple-200 px-4 py-3">
+                    <h2 class="font-bold text-purple-800 text-xs sm:text-sm flex items-center gap-2">
+                        <span class="w-6 h-6 rounded-full bg-purple-600 text-white flex items-center justify-center text-xs font-bold">3</span>
+                        ③相談前と比較して投資先・投資割合を変更しましたか？
+                    </h2>
+                </div>
+
+                <div class="p-4 space-y-4 flex-grow">
+                    <p class="text-xs text-purple-900 bg-purple-50/80 p-2.5 rounded border border-purple-100 leading-relaxed">
+                        変更した場合、投資先ごとに理由と情報提供者を選んでください。
+                    </p>
+
+                    <!-- Change Reasons Table -->
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-xs excel-table border-collapse">
+                            <thead>
+                                <tr class="bg-slate-100 text-slate-700">
+                                    <th class="py-2 px-2 text-left font-semibold">投資先</th>
+                                    <th class="py-2 px-2 text-left font-semibold">変更理由</th>
+                                    <th class="py-2 px-2 text-left font-semibold">参考カード</th>
+                                    <th class="py-2 px-2 text-left font-semibold">情報提供者</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-200">
+                                <tr>
+                                    <td class="py-2 px-2 bg-slate-50 font-medium text-slate-700">TOPIX</td>
+                                    <td class="p-1">
+                                        <select class="excel-select change-reason" data-asset="topix">
+                                            <option value="なし">なし</option>
+                                            <option value="増額した">増額した</option>
+                                            <option value="減額した">減額した</option>
+                                            <option value="新規投資">新規投資</option>
+                                        </select>
+                                    </td>
+                                    <td class="p-1"><input type="text" class="excel-text-input ref-card" data-asset="topix" placeholder="カード"></td>
+                                    <td class="p-1">
+                                        <select class="excel-select ref-provider" data-asset="topix">
+                                            <option value="">-- 選択 --</option>
+                                            <option value="国内経済">国内経済</option>
+                                            <option value="世界経済">世界経済</option>
+                                            <option value="市場">市場</option>
+                                            <option value="金融財政政策">金融財政政策</option>
+                                        </select>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="py-2 px-2 bg-slate-50 font-medium text-slate-700">グロース250</td>
+                                    <td class="p-1">
+                                        <select class="excel-select change-reason" data-asset="growth">
+                                            <option value="なし">なし</option>
+                                            <option value="増額した">増額した</option>
+                                            <option value="減額した">減額した</option>
+                                            <option value="新規投資">新規投資</option>
+                                        </select>
+                                    </td>
+                                    <td class="p-1"><input type="text" class="excel-text-input ref-card" data-asset="growth" placeholder="カード"></td>
+                                    <td class="p-1">
+                                        <select class="excel-select ref-provider" data-asset="growth">
+                                            <option value="">-- 選択 --</option>
+                                            <option value="国内経済">国内経済</option>
+                                            <option value="世界経済">世界経済</option>
+                                            <option value="市場">市場</option>
+                                            <option value="金融財政政策">金融財政政策</option>
+                                        </select>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="py-2 px-2 bg-slate-50 font-medium text-slate-700">オルカン</td>
+                                    <td class="p-1">
+                                        <select class="excel-select change-reason" data-asset="allcountry">
+                                            <option value="なし">なし</option>
+                                            <option value="増額した">増額した</option>
+                                            <option value="減額した">減額した</option>
+                                            <option value="新規投資">新規投資</option>
+                                        </select>
+                                    </td>
+                                    <td class="p-1"><input type="text" class="excel-text-input ref-card" data-asset="allcountry" placeholder="カード"></td>
+                                    <td class="p-1">
+                                        <select class="excel-select ref-provider" data-asset="allcountry">
+                                            <option value="">-- 選択 --</option>
+                                            <option value="国内経済">国内経済</option>
+                                            <option value="世界経済">世界経済</option>
+                                            <option value="市場">市場</option>
+                                            <option value="金融財政政策">金融財政政策</option>
+                                        </select>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="py-2 px-2 bg-slate-50 font-medium text-slate-700">国内債券</td>
+                                    <td class="p-1">
+                                        <select class="excel-select change-reason" data-asset="bond">
+                                            <option value="なし">なし</option>
+                                            <option value="増額した">増額した</option>
+                                            <option value="減額した">減額した</option>
+                                            <option value="新規投資">新規投資</option>
+                                        </select>
+                                    </td>
+                                    <td class="p-1"><input type="text" class="excel-text-input ref-card" data-asset="bond" placeholder="カード"></td>
+                                    <td class="p-1">
+                                        <select class="excel-select ref-provider" data-asset="bond">
+                                            <option value="">-- 選択 --</option>
+                                            <option value="国内経済">国内経済</option>
+                                            <option value="世界経済">世界経済</option>
+                                            <option value="市場">市場</option>
+                                            <option value="金融財政政策">金融財政政策</option>
+                                        </select>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="py-2 px-2 bg-slate-50 font-medium text-slate-700">預金</td>
+                                    <td class="p-1">
+                                        <select class="excel-select change-reason" data-asset="cash">
+                                            <option value="なし">なし</option>
+                                            <option value="増額した">増額した</option>
+                                            <option value="減額した">減額した</option>
+                                        </select>
+                                    </td>
+                                    <td class="p-1"><input type="text" class="excel-text-input ref-card" data-asset="cash" placeholder="カード"></td>
+                                    <td class="p-1">
+                                        <select class="excel-select ref-provider" data-asset="cash">
+                                            <option value="">-- 選択 --</option>
+                                            <option value="国内経済">国内経済</option>
+                                            <option value="世界経済">世界経済</option>
+                                            <option value="市場">市場</option>
+                                            <option value="金融財政政策">金融財政政策</option>
+                                        </select>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Action Buttons Area -->
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col md:flex-row items-center justify-center gap-4">
+            
+            <!-- 1. トータル資産を確認する -->
+            <button id="btnCheckTotal" class="w-full md:w-auto bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold py-3.5 px-8 rounded-lg shadow hover:shadow-md transition-all duration-200 flex items-center justify-center gap-2 text-base">
+                <i class="fa-solid fa-chart-line"></i>
+                トータル資産を確認する
+            </button>
+
+            <!-- 2. 前年度へ移動 -->
+            <button id="btnPrevYear" class="w-full md:w-auto bg-slate-600 hover:bg-slate-700 active:bg-slate-800 text-white font-bold py-3.5 px-6 rounded-lg shadow transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-slate-600">
+                <i class="fa-solid fa-arrow-left"></i>
+                前年度へ移動
+            </button>
+
+            <!-- 3. 次年度へ移動（3年目は「3年間の最終結果を見る」へ変化） -->
+            <button id="btnNextYear" class="w-full md:w-auto bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-bold py-3.5 px-7 rounded-lg shadow transition-all duration-200 flex items-center justify-center gap-2">
+                <span id="btnNextYearText">次年度へ移動</span>
+                <i id="btnNextYearIcon" class="fa-solid fa-arrow-right"></i>
+            </button>
+
+        </div>
+
+    </main>
+
+    <!-- Yearly Result Modal Dialog -->
+    <div id="resultModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto flex flex-col transform transition-all">
+            <!-- Modal Header -->
+            <div class="bg-slate-900 text-white p-5 flex justify-between items-center sticky top-0 z-10">
+                <div class="flex items-center gap-3">
+                    <span id="modalYearTag" class="bg-red-600 text-white font-bold text-sm px-3 py-1 rounded">一年目</span>
+                    <h3 class="text-lg sm:text-xl font-bold">市場運用結果レポート</h3>
+                </div>
+                <button id="closeModal" class="text-slate-400 hover:text-white text-2xl font-bold p-1">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- Modal Content -->
+            <div class="p-6 space-y-6">
+
+                <!-- Market Rates for Year -->
+                <div>
+                    <h4 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">この年の各アセット市場騰落率</h4>
+                    <div id="marketReturnGrid" class="grid grid-cols-2 sm:grid-cols-5 gap-3 text-center">
+                        <!-- Dynamic Injection -->
+                    </div>
+                </div>
+
+                <!-- Comparison Cards (Before vs After) -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Before Result -->
+                    <div class="border border-rose-200 bg-rose-50/50 p-4 rounded-xl space-y-2">
+                        <div class="text-xs font-bold text-rose-700">① 相談前の配分結果</div>
+                        <div class="flex justify-between items-baseline">
+                            <span class="text-slate-600 text-sm">投資元本: 100 万円</span>
+                            <span id="modalBeforeNet" class="text-2xl font-extrabold text-slate-800">0 万円</span>
+                        </div>
+                        <div class="flex justify-between text-xs border-t border-rose-200 pt-2">
+                            <span>単年度損益:</span>
+                            <span id="modalBeforeDiff" class="font-bold">0 万円</span>
+                        </div>
+                    </div>
+
+                    <!-- After Result -->
+                    <div class="border border-indigo-200 bg-indigo-50/50 p-4 rounded-xl space-y-2">
+                        <div class="text-xs font-bold text-indigo-700">② 相談後の配分結果</div>
+                        <div class="flex justify-between items-baseline">
+                            <span class="text-slate-600 text-sm">投資元本: 100 万円</span>
+                            <span id="modalAfterNet" class="text-2xl font-extrabold text-indigo-900">0 万円</span>
+                        </div>
+                        <div class="flex justify-between text-xs border-t border-indigo-200 pt-2">
+                            <span>単年度損益:</span>
+                            <span id="modalAfterDiff" class="font-bold">0 万円</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Difference Impact -->
+                <div id="advisorImpactBox" class="bg-amber-50 border border-amber-200 rounded-xl p-4 text-xs sm:text-sm text-amber-900 flex items-center justify-between">
+                    <span class="font-bold">相談による運用差額 (アドバイス効果):</span>
+                    <span id="advisorImpactValue" class="text-lg font-extrabold text-amber-700">+0.0 万円</span>
+                </div>
+
+                <!-- Chart -->
+                <div>
+                    <h4 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">3年間の資産推移グラフ</h4>
+                    <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 h-64">
+                        <canvas id="assetChart"></canvas>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="bg-slate-50 p-4 border-t border-slate-200 flex justify-end">
+                <button id="modalCloseBtn" class="bg-slate-800 hover:bg-slate-900 text-white font-bold py-2 px-6 rounded-lg">
+                    閉じる
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Final 3-Year Summary Modal Dialog -->
+    <div id="finalSummaryModal" class="fixed inset-0 bg-slate-900/70 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto flex flex-col transform transition-all">
+            <!-- Modal Header -->
+            <div class="bg-gradient-to-r from-emerald-700 to-teal-800 text-white p-6 flex justify-between items-center sticky top-0 z-10">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full bg-amber-400 text-slate-900 flex items-center justify-center font-black text-xl shadow">
+                        <i class="fa-solid fa-trophy text-amber-900"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-black">全3年間 投資体験シミュレーション 最終成績</h3>
+                        <p class="text-xs text-emerald-100">3年間の運用成績サマリーおよび相談成果比較</p>
+                    </div>
+                </div>
+                <button id="closeFinalModal" class="text-emerald-200 hover:text-white text-2xl font-bold p-1">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- Modal Body -->
+            <div class="p-6 space-y-6">
+
+                <!-- Hero Final Stats -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+                    <div class="bg-slate-50 border border-slate-200 rounded-xl p-4">
+                        <span class="text-xs font-bold text-slate-500 uppercase">3年間 累計投資元本</span>
+                        <div class="text-2xl font-black text-slate-800 mt-1">300.0 万円</div>
+                    </div>
+                    <div class="bg-rose-50 border border-rose-200 rounded-xl p-4">
+                        <span class="text-xs font-bold text-rose-700 uppercase">① 相談前 通算最終資産</span>
+                        <div id="finalBeforeTotal" class="text-2xl font-black text-rose-800 mt-1">0.0 万円</div>
+                        <div id="finalBeforeProfit" class="text-xs font-bold text-rose-600 mt-1">利益: 0.0 万円</div>
+                    </div>
+                    <div class="bg-emerald-50 border-2 border-emerald-500 rounded-xl p-4 shadow-sm">
+                        <span class="text-xs font-bold text-emerald-800 uppercase">② 相談後 通算最終資産</span>
+                        <div id="finalAfterTotal" class="text-3xl font-black text-emerald-700 mt-1">0.0 万円</div>
+                        <div id="finalAfterProfit" class="text-xs font-bold text-emerald-600 mt-1">利益: 0.0 万円</div>
+                    </div>
+                </div>
+
+                <!-- Final Advice Impact -->
+                <div class="bg-amber-50 border-2 border-amber-300 rounded-xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-amber-950">
+                    <div class="flex items-center gap-3">
+                        <i class="fa-solid fa-medal text-amber-500 text-3xl"></i>
+                        <div>
+                            <div class="font-bold text-base">3年間の相談アドバイスによる累計創出価値</div>
+                            <div class="text-xs text-amber-800">相談前プランと比較した相談後プランの最終資産増減額</div>
+                        </div>
+                    </div>
+                    <div id="finalAdvisorImpact" class="text-2xl sm:text-3xl font-black text-amber-700 whitespace-nowrap">
+                        +0.0 万円
+                    </div>
+                </div>
+
+                <!-- Breakdown Table -->
+                <div>
+                    <h4 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">各年度ごとの損益明細</h4>
+                    <div class="overflow-x-auto border border-slate-200 rounded-xl">
+                        <table class="w-full text-xs text-left text-slate-700">
+                            <thead class="bg-slate-100 text-slate-700 uppercase font-bold border-b border-slate-200">
+                                <tr>
+                                    <th class="py-3 px-4">年度</th>
+                                    <th class="py-3 px-4 text-right">① 相談前 単年損益</th>
+                                    <th class="py-3 px-4 text-right">① 相談前 期末資産</th>
+                                    <th class="py-3 px-4 text-right">② 相談後 単年損益</th>
+                                    <th class="py-3 px-4 text-right">② 相談後 期末資産</th>
+                                    <th class="py-3 px-4 text-right">単年改善差額</th>
+                                </tr>
+                            </thead>
+                            <tbody id="finalBreakdownBody" class="divide-y divide-slate-200 font-medium">
+                                <!-- JS Dynamic Injection -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="bg-slate-50 p-4 border-t border-slate-200 flex justify-end">
+                <button id="closeFinalModalBtn" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-8 rounded-lg shadow">
+                    シミュレーション終了
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="toastNotification" class="fixed bottom-5 right-5 bg-slate-800 text-white px-5 py-3 rounded-lg shadow-xl z-50 flex items-center gap-3 transform translate-y-20 opacity-0 transition-all duration-300">
+        <i id="toastIcon" class="fa-solid fa-circle-info text-blue-400"></i>
+        <span id="toastMessage" class="text-sm font-medium">通知</span>
+    </div>
+
+    <script>
+        const TOTAL_YEARS = 3;
+        const DEFAULT_YEAR_LABELS = ["一年目", "二年目", "三年目"];
+        const DEFAULT_CALENDAR = ["2024年度", "2025年度", "2026年度"];
+
+        // Annual Market Returns (%) for 3 Years
+        const MARKET_RETURNS = [
+            { topix: -18.1, growth: -33.8, allcountry: -12.8, bond: 2, cash: 0.0 },
+            { topix: 47.6, growth: 93.5, allcountry: 56.5, bond: 2, cash: 0.0 },
+            { topix: 0.0, growth: -33.6, allcountry: 20.0, bond: 2, cash: 0.0 }
+        ];
+
+        function createInitialYearState() {
+            return {
+                before: { topix: 0, growth: 0, allcountry: 0, bond: 0, cash: 100, reasons: [], reasonOtherText: '' },
+                after: { topix: 0, growth: 0, allcountry: 0, bond: 0, cash: 100, reasons: [], reasonOtherText: '' },
+                reasons3: {
+                    topix: { reason: 'なし', card: '', provider: '' },
+                    growth: { reason: 'なし', card: '', provider: '' },
+                    allcountry: { reason: 'なし', card: '', provider: '' },
+                    bond: { reason: 'なし', card: '', provider: '' },
+                    cash: { reason: 'なし', card: '', provider: '' }
+                },
+                calculated: false,
+                beforeGain: 0,
+                afterGain: 0,
+                beforeNet: 100,
+                afterNet: 100
+            };
+        }
+
+        const state = {
+            currentYearIndex: 0,
+            yearsData: Array.from({ length: TOTAL_YEARS }, () => createInitialYearState())
+        };
+
+        const DOM = {
+            yearLabel: document.getElementById('yearLabel'),
+            yearDisplay: document.getElementById('yearDisplay'),
+            annualInvestment: document.getElementById('annualInvestment'),
+            totalAssetHeader: document.getElementById('totalAssetHeader'),
+            progressYearHeader: document.getElementById('progressYearHeader'),
+
+            beforeInputs: document.querySelectorAll('.before-input'),
+            beforeTotal: document.getElementById('beforeTotal'),
+            beforeStatusBadge: document.getElementById('beforeStatusBadge'),
+            beforeReasonOtherText: document.getElementById('beforeReasonOtherText'),
+
+            afterInputs: document.querySelectorAll('.after-input'),
+            afterTotal: document.getElementById('afterTotal'),
+            afterStatusBadge: document.getElementById('afterStatusBadge'),
+            afterReasonOtherText: document.getElementById('afterReasonOtherText'),
+
+            referOthersCheck: document.getElementById('referOthersCheck'),
+            section3Card: document.getElementById('section3Card'),
+
+            btnCheckTotal: document.getElementById('btnCheckTotal'),
+            btnPrevYear: document.getElementById('btnPrevYear'),
+            btnNextYear: document.getElementById('btnNextYear'),
+            btnNextYearText: document.getElementById('btnNextYearText'),
+            btnNextYearIcon: document.getElementById('btnNextYearIcon'),
+
+            resultModal: document.getElementById('resultModal'),
+            closeModal: document.getElementById('closeModal'),
+            modalCloseBtn: document.getElementById('modalCloseBtn'),
+            modalYearTag: document.getElementById('modalYearTag'),
+            marketReturnGrid: document.getElementById('marketReturnGrid'),
+            modalBeforeNet: document.getElementById('modalBeforeNet'),
+            modalBeforeDiff: document.getElementById('modalBeforeDiff'),
+            modalAfterNet: document.getElementById('modalAfterNet'),
+            modalAfterDiff: document.getElementById('modalAfterDiff'),
+            advisorImpactValue: document.getElementById('advisorImpactValue'),
+
+            finalSummaryModal: document.getElementById('finalSummaryModal'),
+            closeFinalModal: document.getElementById('closeFinalModal'),
+            closeFinalModalBtn: document.getElementById('closeFinalModalBtn'),
+            finalBeforeTotal: document.getElementById('finalBeforeTotal'),
+            finalBeforeProfit: document.getElementById('finalBeforeProfit'),
+            finalAfterTotal: document.getElementById('finalAfterTotal'),
+            finalAfterProfit: document.getElementById('finalAfterProfit'),
+            finalAdvisorImpact: document.getElementById('finalAdvisorImpact'),
+            finalBreakdownBody: document.getElementById('finalBreakdownBody'),
+
+            toastNotification: document.getElementById('toastNotification'),
+            toastMessage: document.getElementById('toastMessage'),
+            toastIcon: document.getElementById('toastIcon')
+        };
+
+        let chartInstance = null;
+
+        window.addEventListener('DOMContentLoaded', () => {
+            setupEventListeners();
+            initChart();
+            loadYearToUI(state.currentYearIndex);
+        });
+
+        function setupEventListeners() {
+            DOM.beforeInputs.forEach(input => input.addEventListener('input', updateTotalsFromUI));
+            DOM.afterInputs.forEach(input => input.addEventListener('input', updateTotalsFromUI));
+
+            DOM.referOthersCheck.addEventListener('change', (e) => {
+                if (e.target.checked) {
+                    DOM.section3Card.classList.add('ring-2', 'ring-purple-500', 'shadow-lg');
+                } else {
+                    DOM.section3Card.classList.remove('ring-2', 'ring-purple-500', 'shadow-lg');
+                }
+            });
+
+            DOM.btnCheckTotal.addEventListener('click', handleCheckTotal);
+            DOM.btnPrevYear.addEventListener('click', handlePrevYear);
+            DOM.btnNextYear.addEventListener('click', handleNextYear);
+
+            DOM.closeModal.addEventListener('click', () => DOM.resultModal.classList.add('hidden'));
+            DOM.modalCloseBtn.addEventListener('click', () => DOM.resultModal.classList.add('hidden'));
+
+            DOM.closeFinalModal.addEventListener('click', () => DOM.finalSummaryModal.classList.add('hidden'));
+            DOM.closeFinalModalBtn.addEventListener('click', () => DOM.finalSummaryModal.classList.add('hidden'));
+        }
+
+        function saveCurrentUIToState(index) {
+            const yData = state.yearsData[index];
+
+            DOM.beforeInputs.forEach(inp => {
+                yData.before[inp.dataset.asset] = parseFloat(inp.value) || 0;
+            });
+            yData.before.reasons = Array.from(document.querySelectorAll('.before-reason:checked')).map(cb => cb.value);
+            yData.before.reasonOtherText = DOM.beforeReasonOtherText.value;
+
+            DOM.afterInputs.forEach(inp => {
+                yData.after[inp.dataset.asset] = parseFloat(inp.value) || 0;
+            });
+            yData.after.reasons = Array.from(document.querySelectorAll('.after-reason:checked')).map(cb => cb.value);
+            yData.after.reasonOtherText = DOM.afterReasonOtherText.value;
+
+            ['topix', 'growth', 'allcountry', 'bond', 'cash'].forEach(asset => {
+                const reasonSel = document.querySelector(`.change-reason[data-asset="${asset}"]`);
+                const cardInp = document.querySelector(`.ref-card[data-asset="${asset}"]`);
+                const providerSel = document.querySelector(`.ref-provider[data-asset="${asset}"]`);
+
+                yData.reasons3[asset] = {
+                    reason: reasonSel ? reasonSel.value : 'なし',
+                    card: cardInp ? cardInp.value : '',
+                    provider: providerSel ? providerSel.value : ''
+                };
+            });
+        }
+
+        function loadYearToUI(index) {
+            const yData = state.yearsData[index];
+
+            DOM.yearLabel.textContent = DEFAULT_YEAR_LABELS[index];
+            DOM.yearDisplay.textContent = DEFAULT_CALENDAR[index];
+            DOM.progressYearHeader.textContent = `${index + 1} / ${TOTAL_YEARS} 年目`;
+
+            // Prev Year button active condition
+            DOM.btnPrevYear.disabled = (index === 0);
+
+            // Next Year button text/icon update for 3rd year
+            if (index === TOTAL_YEARS - 1) {
+                DOM.btnNextYearText.textContent = "3年間の最終結果を見る";
+                DOM.btnNextYearIcon.className = "fa-solid fa-trophy text-amber-300";
+            } else {
+                DOM.btnNextYearText.textContent = "次年度へ移動";
+                DOM.btnNextYearIcon.className = "fa-solid fa-arrow-right";
+            }
+
+            // Populate Section 1
+            DOM.beforeInputs.forEach(inp => {
+                inp.value = yData.before[inp.dataset.asset] ?? 0;
+            });
+            document.querySelectorAll('.before-reason').forEach(cb => {
+                cb.checked = yData.before.reasons.includes(cb.value);
+            });
+            DOM.beforeReasonOtherText.value = yData.before.reasonOtherText || '';
+
+            // Populate Section 2
+            DOM.afterInputs.forEach(inp => {
+                inp.value = yData.after[inp.dataset.asset] ?? 0;
+            });
+            document.querySelectorAll('.after-reason').forEach(cb => {
+                cb.checked = yData.after.reasons.includes(cb.value);
+            });
+            DOM.afterReasonOtherText.value = yData.after.reasonOtherText || '';
+
+            // Populate Section 3
+            ['topix', 'growth', 'allcountry', 'bond', 'cash'].forEach(asset => {
+                const rData = yData.reasons3[asset] || {};
+                const reasonSel = document.querySelector(`.change-reason[data-asset="${asset}"]`);
+                const cardInp = document.querySelector(`.ref-card[data-asset="${asset}"]`);
+                const providerSel = document.querySelector(`.ref-provider[data-asset="${asset}"]`);
+
+                if (reasonSel) reasonSel.value = rData.reason || 'なし';
+                if (cardInp) cardInp.value = rData.card || '';
+                if (providerSel) providerSel.value = rData.provider || '';
+            });
+
+            if (DOM.referOthersCheck.checked) {
+                DOM.section3Card.classList.add('ring-2', 'ring-purple-500', 'shadow-lg');
+            } else {
+                DOM.section3Card.classList.remove('ring-2', 'ring-purple-500', 'shadow-lg');
+            }
+
+            updateTotalsFromUI();
+            updateAccumulatedTotalHeader();
+        }
+
+        function updateTotalsFromUI() {
+            let beforeSum = 0;
+            DOM.beforeInputs.forEach(inp => beforeSum += (parseFloat(inp.value) || 0));
+            DOM.beforeTotal.textContent = beforeSum;
+            updateBadge(DOM.beforeStatusBadge, beforeSum);
+
+            let afterSum = 0;
+            DOM.afterInputs.forEach(inp => afterSum += (parseFloat(inp.value) || 0));
+            DOM.afterTotal.textContent = afterSum;
+            updateBadge(DOM.afterStatusBadge, afterSum);
+        }
+
+        function updateBadge(badgeElement, sum) {
+            const diff = 100 - sum;
+            if (diff === 0) {
+                badgeElement.textContent = "OK (100万円)";
+                badgeElement.className = "text-xs px-2 py-0.5 rounded font-medium bg-emerald-100 text-emerald-800 border border-emerald-300";
+            } else if (diff > 0) {
+                badgeElement.textContent = `残り ${diff}万円`;
+                badgeElement.className = "text-xs px-2 py-0.5 rounded font-medium bg-amber-100 text-amber-800 border border-amber-300";
+            } else {
+                badgeElement.textContent = `${Math.abs(diff)}万円 超過`;
+                badgeElement.className = "text-xs px-2 py-0.5 rounded font-medium bg-rose-100 text-rose-800 border border-rose-300";
+            }
+        }
+
+        function calculateAccumulatedHistory() {
+            const beforeHistory = [0];
+            const afterHistory = [0];
+
+            let accBefore = 0;
+            let accAfter = 0;
+
+            for (let i = 0; i < TOTAL_YEARS; i++) {
+                const yData = state.yearsData[i];
+                if (yData.calculated) {
+                    accBefore += yData.beforeNet;
+                    accAfter += yData.afterNet;
+                    beforeHistory.push(parseFloat(accBefore.toFixed(1)));
+                    afterHistory.push(parseFloat(accAfter.toFixed(1)));
+                } else {
+                    break;
+                }
+            }
+
+            return { beforeHistory, afterHistory, currentAfterAcc: accAfter };
+        }
+
+        function updateAccumulatedTotalHeader() {
+            const { currentAfterAcc } = calculateAccumulatedHistory();
+            DOM.totalAssetHeader.textContent = `${currentAfterAcc > 0 ? currentAfterAcc.toFixed(1) : '100.0'} 万円`;
+        }
+
+        function handleCheckTotal() {
+            saveCurrentUIToState(state.currentYearIndex);
+
+            const yData = state.yearsData[state.currentYearIndex];
+            const beforeSum = Object.values(yData.before).slice(0, 5).reduce((a, b) => a + b, 0);
+            const afterSum = Object.values(yData.after).slice(0, 5).reduce((a, b) => a + b, 0);
+
+            if (beforeSum !== 100 || afterSum !== 100) {
+                showToast('①相談前、②相談後ともに投資合計をちょうど100万円に設定してください。', 'warning');
+                return;
+            }
+
+            const returns = MARKET_RETURNS[state.currentYearIndex];
+
+            let beforeGain = 0;
+            let afterGain = 0;
+
+            ['topix', 'growth', 'allcountry', 'bond', 'cash'].forEach(asset => {
+                const rate = returns[asset] / 100;
+                beforeGain += yData.before[asset] * rate;
+                afterGain += yData.after[asset] * rate;
+            });
+
+            yData.beforeGain = beforeGain;
+            yData.afterGain = afterGain;
+            yData.beforeNet = 100 + beforeGain;
+            yData.afterNet = 100 + afterGain;
+            yData.calculated = true;
+
+            DOM.modalYearTag.textContent = DEFAULT_YEAR_LABELS[state.currentYearIndex];
+
+            const assetNames = { topix: "TOPIX", growth: "グロース250", allcountry: "オルカン", bond: "国内債券", cash: "預金" };
+            DOM.marketReturnGrid.innerHTML = Object.keys(returns).map(key => {
+                const rate = returns[key];
+                const colorClass = rate > 0 ? 'text-emerald-600 bg-emerald-50 border-emerald-200' : (rate < 0 ? 'text-rose-600 bg-rose-50 border-rose-200' : 'text-slate-600 bg-slate-50 border-slate-200');
+                const sign = rate > 0 ? '+' : '';
+                return `
+                    <div class="p-2.5 rounded-lg border text-xs ${colorClass}">
+                        <div class="font-bold text-slate-700">${assetNames[key]}</div>
+                        <div class="text-base font-extrabold mt-1">${sign}${rate.toFixed(1)}%</div>
+                    </div>
+                `;
+            }).join('');
+
+            DOM.modalBeforeNet.textContent = `${yData.beforeNet.toFixed(1)} 万円`;
+            DOM.modalBeforeDiff.textContent = `${beforeGain >= 0 ? '+' : ''}${beforeGain.toFixed(1)} 万円`;
+            DOM.modalBeforeDiff.className = `font-bold ${beforeGain >= 0 ? 'text-emerald-600' : 'text-rose-600'}`;
+
+            DOM.modalAfterNet.textContent = `${yData.afterNet.toFixed(1)} 万円`;
+            DOM.modalAfterDiff.textContent = `${afterGain >= 0 ? '+' : ''}${afterGain.toFixed(1)} 万円`;
+            DOM.modalAfterDiff.className = `font-bold ${afterGain >= 0 ? 'text-emerald-600' : 'text-rose-600'}`;
+
+            const impact = afterGain - beforeGain;
+            DOM.advisorImpactValue.textContent = `${impact >= 0 ? '+' : ''}${impact.toFixed(1)} 万円`;
+            DOM.advisorImpactValue.className = `text-lg font-extrabold ${impact >= 0 ? 'text-emerald-600' : 'text-rose-600'}`;
+
+            updateChart();
+            updateAccumulatedTotalHeader();
+
+            DOM.resultModal.classList.remove('hidden');
+        }
+
+        function handleNextYear() {
+            saveCurrentUIToState(state.currentYearIndex);
+
+            if (!state.yearsData[state.currentYearIndex].calculated) {
+                showToast('先に「トータル資産を確認する」でこの年度の成果を確定してください。', 'info');
+                return;
+            }
+
+            // 3年目の場合: 最終サマリーモーダルを表示
+            if (state.currentYearIndex === TOTAL_YEARS - 1) {
+                showFinalSummaryModal();
+                return;
+            }
+
+            state.currentYearIndex++;
+            loadYearToUI(state.currentYearIndex);
+            showToast(`${DEFAULT_YEAR_LABELS[state.currentYearIndex]}へ進みました。`, 'success');
+        }
+
+        function handlePrevYear() {
+            if (state.currentYearIndex <= 0) return;
+
+            saveCurrentUIToState(state.currentYearIndex);
+            state.currentYearIndex--;
+            loadYearToUI(state.currentYearIndex);
+            showToast(`前年度（${DEFAULT_YEAR_LABELS[state.currentYearIndex]}）へ移動しました。`, 'info');
+        }
+
+        function showFinalSummaryModal() {
+            let totalBeforeNet = 0;
+            let totalAfterNet = 0;
+            let totalCapital = TOTAL_YEARS * 100;
+
+            let htmlRows = '';
+
+            for (let i = 0; i < TOTAL_YEARS; i++) {
+                const y = state.yearsData[i];
+                totalBeforeNet += y.beforeNet;
+                totalAfterNet += y.afterNet;
+
+                const diffYear = y.afterGain - y.beforeGain;
+                const diffClass = diffYear >= 0 ? 'text-emerald-600 font-bold' : 'text-rose-600 font-bold';
+
+                htmlRows += `
+                    <tr class="hover:bg-slate-50">
+                        <td class="py-3 px-4 font-bold text-slate-800">${DEFAULT_YEAR_LABELS[i]} (${DEFAULT_CALENDAR[i]})</td>
+                        <td class="py-3 px-4 text-right ${y.beforeGain >= 0 ? 'text-emerald-600' : 'text-rose-600'}">${y.beforeGain >= 0 ? '+' : ''}${y.beforeGain.toFixed(1)} 万円</td>
+                        <td class="py-3 px-4 text-right">${y.beforeNet.toFixed(1)} 万円</td>
+                        <td class="py-3 px-4 text-right ${y.afterGain >= 0 ? 'text-emerald-600' : 'text-rose-600'}">${y.afterGain >= 0 ? '+' : ''}${y.afterGain.toFixed(1)} 万円</td>
+                        <td class="py-3 px-4 text-right font-bold text-indigo-900">${y.afterNet.toFixed(1)} 万円</td>
+                        <td class="py-3 px-4 text-right ${diffClass}">${diffYear >= 0 ? '+' : ''}${diffYear.toFixed(1)} 万円</td>
+                    </tr>
+                `;
+            }
+
+            const totalBeforeProfit = totalBeforeNet - totalCapital;
+            const totalAfterProfit = totalAfterNet - totalCapital;
+            const totalImpact = totalAfterNet - totalBeforeNet;
+
+            DOM.finalBeforeTotal.textContent = `${totalBeforeNet.toFixed(1)} 万円`;
+            DOM.finalBeforeProfit.textContent = `利益: ${totalBeforeProfit >= 0 ? '+' : ''}${totalBeforeProfit.toFixed(1)} 万円`;
+
+            DOM.finalAfterTotal.textContent = `${totalAfterNet.toFixed(1)} 万円`;
+            DOM.finalAfterProfit.textContent = `利益: ${totalAfterProfit >= 0 ? '+' : ''}${totalAfterProfit.toFixed(1)} 万円`;
+
+            DOM.finalAdvisorImpact.textContent = `${totalImpact >= 0 ? '+' : ''}${totalImpact.toFixed(1)} 万円`;
+            DOM.finalAdvisorImpact.className = `text-2xl sm:text-3xl font-black ${totalImpact >= 0 ? 'text-emerald-600' : 'text-rose-600'}`;
+
+            DOM.finalBreakdownBody.innerHTML = htmlRows;
+            DOM.finalSummaryModal.classList.remove('hidden');
+        }
+
+        function initChart() {
+            const ctx = document.getElementById('assetChart').getContext('2d');
+            chartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ["初期 (0年目)"],
+                    datasets: [
+                        {
+                            label: '相談後 (累積資産)',
+                            data: [0],
+                            borderColor: '#4f46e5',
+                            backgroundColor: 'rgba(79, 70, 229, 0.1)',
+                            borderWidth: 3,
+                            fill: true,
+                            tension: 0.3,
+                            pointRadius: 5
+                        },
+                        {
+                            label: '相談前 (累積資産)',
+                            data: [0],
+                            borderColor: '#e11d48',
+                            backgroundColor: 'rgba(225, 29, 72, 0.05)',
+                            borderWidth: 2,
+                            borderDash: [5, 5],
+                            fill: false,
+                            tension: 0.3,
+                            pointRadius: 4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'top' },
+                        tooltip: {
+                            callbacks: {
+                                label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y} 万円`
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: { display: true, text: '資産額 (万円)' }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateChart() {
+            if (!chartInstance) return;
+
+            const { beforeHistory, afterHistory } = calculateAccumulatedHistory();
+            const labels = ["初期 (0年目)"];
+            for (let i = 1; i < beforeHistory.length; i++) {
+                labels.push(DEFAULT_YEAR_LABELS[i - 1]);
+            }
+
+            chartInstance.data.labels = labels;
+            chartInstance.data.datasets[0].data = afterHistory;
+            chartInstance.data.datasets[1].data = beforeHistory;
+            chartInstance.update();
+        }
+
+        function showToast(message, type = 'info') {
+            DOM.toastMessage.textContent = message;
+            
+            if (type === 'success') {
+                DOM.toastIcon.className = 'fa-solid fa-circle-check text-emerald-400';
+            } else if (type === 'warning') {
+                DOM.toastIcon.className = 'fa-solid fa-triangle-exclamation text-amber-400';
+            } else {
+                DOM.toastIcon.className = 'fa-solid fa-circle-info text-blue-400';
+            }
+
+            DOM.toastNotification.classList.remove('translate-y-20', 'opacity-0');
+            setTimeout(() => {
+                DOM.toastNotification.classList.add('translate-y-20', 'opacity-0');
+            }, 3200);
+        }
+    </script>
+</body>
+</html>
